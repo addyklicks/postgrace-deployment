@@ -15,6 +15,9 @@ This document outlines the design and implementation of a secure PostgreSQL depl
 - **CI/CD**: GitHub Actions
 - **GitOps Implementation**: ArgoCD (recommended for implementation)
 
+#### 2.2 High-Level Architecture
+
+![Flow Diagram](https://www.mermaidchart.com/raw/b1f39924-55fe-4652-ba5f-ee177739c2a4?theme=light&version=v0.1&format=svg)
 
 The architecture consists of:
 - PostgreSQL deployment with persistent storage
