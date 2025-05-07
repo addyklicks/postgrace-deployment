@@ -6,7 +6,7 @@ This repository contains Kubernetes manifests for deploying PostgreSQL as part o
 
 ## Architecture
 
-![PostgreSQL GitOps Deployment Architecture](architecture-diagram.png)
+![PostgreSQL GitOps Deployment Architecture](diagram.svg)
 
 The architecture follows a GitOps approach:
 1. Developers push code changes to GitHub
