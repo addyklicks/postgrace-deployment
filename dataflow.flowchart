@@ -1,0 +1,60 @@
+flowchart TD
+    subgraph "Kubernetes Cluster"
+        subgraph "Patient Monitoring Namespace"
+            subgraph "Network Policy Boundary" 
+                PG["PostgreSQL Deployment\nSecurityContext: non-root\nReadOnlyRootFilesystem: true"]
+                PGService["PostgreSQL Service\nClusterIP: Internal only"]
+                PVC["Persistent Volume Claim\n10Gi Storage"]
+            end
+            
+            subgraph "RBAC Controls"
+                SA["Service Account\npostgres-sa"]
+                Role["Role\nSecret Access: postgres-secrets only\nPVC Access: postgres-pvc only"]
+            end
+            
+            API["Patient Monitoring API"]
+            
+            subgraph "Secret Management"
+                KS["Dev: K8s Secrets\nProd: SealedSecrets"]
+            end
+        end
+        
+        Ingress["Ingress Controller"]
+        
+        subgraph "External Services"
+            DNS["DNS Service\nkube-system"]
+        end
+    end
+    
+    Client["Medical Staff\nClient Applications"]
+    
+    %% Connections
+    Client -->|"HTTPS"| Ingress
+    Ingress -->|"Internal routing"| API
+    API -->|"SQL Queries\nAuth Required"| PGService
+    PGService --> PG
+    PG -->|"Data Storage"| PVC
+    PG <-->|"DNS Queries Only"| DNS
+    
+    %% Access Control
+    KS -->|"Credentials"| PG
+    SA -->|"Uses"| PG
+    Role -->|"Limits"| SA
+    
+    %% Styling
+    classDef service fill:#f9f,stroke:#333,stroke-width:2px
+    classDef security fill:#bbf,stroke:#33a,stroke-width:2px
+    classDef storage fill:#bfb,stroke:#3a3,stroke-width:2px
+    classDef external fill:#fbb,stroke:#a33,stroke-width:2px
+    classDef client fill:#ddd,stroke:#333,stroke-width:2px
+    
+    class PGService,API service
+    class PG,Role,KS security
+    class PVC storage
+    class DNS,Client external
+    class Ingress,SA client
+    
+    %% Notes
+    style Network Policy Boundary fill:none,stroke:#33a,stroke-width:2px,stroke-dasharray: 5 5
+    style RBAC Controls fill:none,stroke:#33a,stroke-width:2px,stroke-dasharray: 5 5
+    style Secret Management fill:none,stroke:#a3a,stroke-width:2px,stroke-dasharray: 5 5
