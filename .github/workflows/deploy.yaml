@@ -1,0 +1,123 @@
+name: Deploy PostgreSQL for Patient Monitoring
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'base/**'
+      - 'overlays/**'
+      - '.github/workflows/deploy.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'base/**'
+      - 'overlays/**'
+      - '.github/workflows/deploy.yaml'
+
+jobs:
+  validate:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "4.5.7"
+
+      - name: Validate kustomize build - dev
+        run: |
+          kustomize build overlays/dev > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "Dev overlay failed to build"
+            exit 1
+          fi
+
+      - name: Validate kustomize build - prod
+        run: |
+          kustomize build overlays/prod > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "Prod overlay failed to build"
+            exit 1
+          fi
+  
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "4.5.7"
+
+      - name: Generate manifests for security scanning
+        run: |
+          mkdir -p manifests
+          kustomize build overlays/dev > manifests/dev.yaml
+          kustomize build overlays/prod > manifests/prod.yaml
+
+      - name: Run Trivy for Kubernetes manifests
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'manifests/'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "4.5.7"
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
+          
+      - name: Deploy to Dev
+        run: |
+          kustomize build overlays/dev | kubectl apply -f -
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment: production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "4.5.7"
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG_PROD }}
+          
+      - name: Deploy to Production
+        run: |
+          kustomize build overlays/prod | kubectl apply -f -

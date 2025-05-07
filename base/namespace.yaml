@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: patient-monitoring
+  labels:
+    name: patient-monitoring
+    environment: base
+    compliance: nhs-data-security
+  annotations:
+    description: "Namespace for the Patient Monitoring System's PostgreSQL database"

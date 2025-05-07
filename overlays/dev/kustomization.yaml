@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: patient-monitoring
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- postgres-secrets.yaml
+
+commonLabels:
+  environment: dev
+
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: dev-patient-monitoring
+  target:
+    kind: Namespace
+    name: patient-monitoring

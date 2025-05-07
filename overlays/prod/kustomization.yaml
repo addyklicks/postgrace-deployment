@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: patient-monitoring
+
+resources:
+- ../../base
+- sealed-secrets/postgres-sealed-secrets.yaml
+
+commonLabels:
+  environment: prod
+
+patches:
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: prod-patient-monitoring
+  target:
+    kind: Namespace
+    name: patient-monitoring
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 3
+  target:
+    kind: Deployment
+    name: postgres

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: patient-monitoring
+  labels:
+    app: postgres
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5432"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
